@@ -26,7 +26,7 @@
 
     var balansers_with_search;
 
-    // ИЗМЕНЕНИЕ: Жестко заданный uid
+    // Hardcoded UID
     var unic_id = '123';
 
     function getAndroidVersion() {
@@ -87,8 +87,8 @@
                 rchtype: Lampa.Platform.is('android') ? 'apk' : Lampa.Platform.is('tizen') ? 'cors' : (window.rch_nws[hostkey].type || 'web'),
                 apkVersion: window.rch_nws[hostkey].apkVersion,
                 player: Lampa.Storage.field('player'),
-                account_email: 'aru@gmail.com', // ИЗМЕНЕНИЕ: Хардкод email
-                unic_id: '123', // ИЗМЕНЕНИЕ: Хардкод uid
+                account_email: 'aru@gmail.com', // Хардкод email
+                unic_id: '123', // Хардкод uid
                 profile_id: Lampa.Storage.get('lampac_profile_id', ''),
                 token: ''
             });
@@ -223,7 +223,7 @@
 
     function account(url) {
         url = url + '';
-        // ИЗМЕНЕНИЕ: Принудительная установка email и uid
+        // FORCE EMAIL AND UID
         if (url.indexOf('account_email=') == -1) {
             url = Lampa.Utils.addUrlComponent(url, 'account_email=aru@gmail.com');
         }
@@ -473,7 +473,7 @@
             query.push('clarification=' + (object.clarification ? 1 : 0));
             query.push('similar=' + (object.similar ? true : false));
             query.push('rchtype=' + (((window.rch_nws && window.rch_nws[hostkey]) ? window.rch_nws[hostkey].type : (window.rch && window.rch[hostkey]) ? window.rch[hostkey].type : '') || ''));
-            // ИЗМЕНЕНИЕ: Хардкод для cub_id от почты aru@gmail.com
+            // Hardcoded cub_id
             query.push('cub_id=' + Lampa.Utils.hash('aru@gmail.com'));
             return url + (url.indexOf('?') >= 0 ? '&' : '?') + query.join('&');
         };
@@ -513,104 +513,36 @@
                 }
             });
         };
-        this.lifeSource = function() {
-            var _this3 = this;
-            return new Promise(function(resolve, reject) {
-                var url = _this3.requestParams(Defined.localhost + 'lifeevents?memkey=' + (_this3.memkey || ''));
-                var red = false;
-                var gou = function gou(json, any) {
-                    if (json.accsdb) return reject(json);
-                    var last_balanser = _this3.getLastChoiceBalanser();
-                    if (!red) {
-                        var _filter = json.online.filter(function(c) {
-                            return any ? c.show : c.show && c.name.toLowerCase() == last_balanser;
-                        });
-                        if (_filter.length) {
-                            red = true;
-                            resolve(json.online.filter(function(c) {
-                                return c.show;
-                            }));
-                        } else if (any) {
-                            reject();
-                        }
-                    }
-                };
-                var fin = function fin(call) {
-                    network.timeout(3000);
-                    network.silent(account(url), function(json) {
-                        life_wait_times++;
-                        filter_sources = [];
-                        sources = {};
-                        json.online.forEach(function(j) {
-                            var name = balanserName(j);
-                            sources[name] = {
-                                url: j.url,
-                                name: j.name,
-                                show: typeof j.show == 'undefined' ? true : j.show
-                            };
-                        });
-                        filter_sources = Lampa.Arrays.getKeys(sources);
-                        filter.set('sort', filter_sources.map(function(e) {
-                            return {
-                                title: sources[e].name,
-                                source: e,
-                                selected: e == balanser,
-                                ghost: !sources[e].show
-                            };
-                        }));
-                        filter.chosen('sort', [sources[balanser] ? sources[balanser].name : balanser]);
-                        gou(json);
-                        var lastb = _this3.getLastChoiceBalanser();
-                        if (life_wait_times > 15 || json.ready) {
-                            filter.render().find('.lampac-balanser-loader').remove();
-                            gou(json, true);
-                        } else if (!red && sources[lastb] && sources[lastb].show) {
-                            gou(json, true);
-                            life_wait_timer = setTimeout(fin, 1000);
-                        } else {
-                            life_wait_timer = setTimeout(fin, 1000);
-                        }
-                    }, function() {
-                        life_wait_times++;
-                        if (life_wait_times > 15) {
-                            reject();
-                        } else {
-                            life_wait_timer = setTimeout(fin, 1000);
-                        }
-                    }, false, {
-                        headers: {
-                            'X-Kit-AesGcm': Lampa.Storage.get('aesgcmkey', '')
-                        }
-                    });
-                };
-                fin();
-            });
-        };
+        
+        // --- BYPASS FUNCTIONALITY START ---
+        // Полностью заменяем createSource на локальную генерацию списка
         this.createSource = function() {
             var _this4 = this;
             return new Promise(function(resolve, reject) {
-                var url = _this4.requestParams(Defined.localhost + 'lite/events?life=true');
-                network.timeout(15000);
-                network.silent(account(url), function(json) {
-                    if (json.accsdb) return reject(json);
-                    if (json.life) {
-                        _this4.memkey = json.memkey;
-                        if (json.title) {
-                            if (object.movie.name) object.movie.name = json.title;
-                            if (object.movie.title) object.movie.title = json.title;
-                        }
-                        filter.render().find('.filter--sort').append('<span class="lampac-balanser-loader" style="width: 1.2em; height: 1.2em; margin-top: 0; background: url(./img/loader.svg) no-repeat 50% 50%; background-size: contain; margin-left: 0.5em"></span>');
-                        _this4.lifeSource().then(_this4.startSource).then(resolve)["catch"](reject);
-                    } else {
-                        _this4.startSource(json).then(resolve)["catch"](reject);
-                    }
-                }, reject, false, {
-                    headers: {
-                        'X-Kit-AesGcm': Lampa.Storage.get('aesgcmkey', '')
-                    }
+                // Список балансеров по умолчанию (если сервер не отдал их ранее)
+                var default_bals = ['rezka', 'filmix', 'collaps', 'videocdn', 'kodik', 'ashdi', 'hdvb', 'zetflix', 'kinopub', 'vokino', 'alloha', 'cdnmovies', 'vibix', 'videodb', 'kinotochka'];
+                
+                // Используем загруженные ранее или дефолтные
+                var use_bals = (balansers_with_search && balansers_with_search.length) ? balansers_with_search : default_bals;
+                
+                // Формируем структуру ответа, которую ожидает startSource
+                var fake_response = use_bals.map(function(b) {
+                    var name = (typeof b === 'string') ? b : b.name || b;
+                    var url = (typeof b === 'string') ? b : b.url || b;
+                    return { 
+                        name: Lampa.Utils.capitalizeFirstLetter(name), 
+                        url: url, 
+                        show: true,
+                        balanser: name // Важно для корректного определения имени
+                    };
                 });
+
+                // Сразу передаем список в startSource, минуя проверки
+                _this4.startSource(fake_response).then(resolve)["catch"](reject);
             });
         };
+        // --- BYPASS FUNCTIONALITY END ---
+
         /**
          * Подготовка
          */
