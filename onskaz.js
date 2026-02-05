@@ -272,7 +272,7 @@
         else {
             // Логика Skaz (старая, с хардкодом)
             if (url.indexOf('account_email=') == -1) {
-                url = Lampa.Utils.addUrlComponent(url, 'account_email=aru@gmail.com');
+                url = Lampa.Utils.addUrlComponent(url, 'account_email=aksarus@gmail.com');
             }
             if (url.indexOf('uid=') == -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=123');
@@ -2153,3 +2153,4 @@
 
 
 })();
+
