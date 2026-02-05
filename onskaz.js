@@ -1,4 +1,20 @@
 (function() {
+    // --- НАСТРОЙКИ СЕРВЕРОВ (ИЗ SKAZ.JS) ---
+    var connection_source = 'ab2024'; // По умолчанию AB2024
+
+    // AB2024
+    var AB_TOKENS = ['мар.31', 'TotalᴬᵂUK0PRIMETEAM', 'сентябрь', 'июнь99'];
+    var current_ab_token_index = 0;
+
+    // Showy
+    var MIRRORS_SHOWY = [
+        'http://185.121.235.124:11176/',
+        'http://showypro.com/',
+        'http://smotretk.com/'
+    ];
+    var current_showy_index = 0;
+
+    // Skaz (Инициализация зеркал)
     var cf = Lampa.Storage.get('skazonline_servers');
     if (cf == true) {
         var vybor = [
@@ -18,15 +34,22 @@
     var randomIndex = Math.floor(Math.random() * vybor.length);
     var randomUrl = vybor[randomIndex];
 
+    // Helper для получения текущего хоста
+    function getHost() {
+        if (connection_source === 'ab2024') return 'https://ab2024.ru/';
+        if (connection_source === 'showy') return MIRRORS_SHOWY[current_showy_index];
+        return randomUrl; // Skaz
+    }
+
     var Defined = {
         api: 'lampac',
-        localhost: randomUrl,
+        localhost: getHost(), // Динамический хост
         apn: ''
     };
 
     var balansers_with_search;
 
-    // ИЗМЕНЕНИЕ: Жестко заданный uid
+    // Хардкод UID для Skaz
     var unic_id = '123';
 
     function getAndroidVersion() {
@@ -87,8 +110,8 @@
                 rchtype: Lampa.Platform.is('android') ? 'apk' : Lampa.Platform.is('tizen') ? 'cors' : (window.rch_nws[hostkey].type || 'web'),
                 apkVersion: window.rch_nws[hostkey].apkVersion,
                 player: Lampa.Storage.field('player'),
-                account_email: 'aru@gmail.com', // ИЗМЕНЕНИЕ: Хардкод email
-                unic_id: '123', // ИЗМЕНЕНИЕ: Хардкод uid
+                account_email: 'aru@gmail.com',
+                unic_id: '123',
                 profile_id: Lampa.Storage.get('lampac_profile_id', ''),
                 token: ''
             });
@@ -223,13 +246,40 @@
 
     function account(url) {
         url = url + '';
-        // ИЗМЕНЕНИЕ: Принудительная установка email и uid
-        if (url.indexOf('account_email=') == -1) {
-            url = Lampa.Utils.addUrlComponent(url, 'account_email=aru@gmail.com');
+        
+        // --- АВТОРИЗАЦИЯ НА ОСНОВЕ ВЫБРАННОГО СЕРВЕРА (ИЗ SKAZ.JS) ---
+        if (connection_source === 'ab2024') {
+            // Логика AB2024
+            if (url.indexOf('uid=') === -1) {
+                url = Lampa.Utils.addUrlComponent(url, 'uid=4ezu837o');
+            }
+            var token = AB_TOKENS[current_ab_token_index];
+            if (url.indexOf('ab_token=') === -1) {
+                url = Lampa.Utils.addUrlComponent(url, 'ab_token=' + encodeURIComponent(token));
+            } else {
+                url = url.replace(/ab_token=([^&]+)/, 'ab_token=' + encodeURIComponent(token));
+            }
+        } 
+        else if (connection_source === 'showy') {
+            // Логика Showy
+            if (url.indexOf('uid=') === -1) {
+                url = Lampa.Utils.addUrlComponent(url, 'uid=i8nqb9vw');
+            }
+            if (url.indexOf('showy_token=') === -1) {
+                url = Lampa.Utils.addUrlComponent(url, 'showy_token=f8377057-90eb-4d76-93c9-7605952a096l');
+            }
         }
-        if (url.indexOf('uid=') == -1) {
-            url = Lampa.Utils.addUrlComponent(url, 'uid=123');
+        else {
+            // Логика Skaz (старая, с хардкодом)
+            if (url.indexOf('account_email=') == -1) {
+                url = Lampa.Utils.addUrlComponent(url, 'account_email=aru@gmail.com');
+            }
+            if (url.indexOf('uid=') == -1) {
+                url = Lampa.Utils.addUrlComponent(url, 'uid=123');
+            }
         }
+
+        // Общие параметры
         if (url.indexOf('token=') == -1) {
             var token = '';
             if (token != '') url = Lampa.Utils.addUrlComponent(url, 'token=');
@@ -273,9 +323,12 @@
             voice: []
         };
 
+        // Обновляем Defined.localhost при инициализации компонента
+        Defined.localhost = getHost();
+
         if (balansers_with_search == undefined) {
             network.timeout(10000);
-            network.silent(account('http://online' + dd + '3.skaz.tv/lite/withsearch'), function(json) {
+            network.silent(account(Defined.localhost + 'lite/withsearch'), function(json) {
                 balansers_with_search = json;
             }, function() {
                 balansers_with_search = [];
@@ -335,7 +388,21 @@
             filter.render().find('.filter--search').appendTo(filter.render().find('.torrent-filter'));
             filter.onSelect = function(type, a, b) {
                 if (type == 'filter') {
-                    if (a.reset) {
+                    // --- ОБРАБОТКА ВЫБОРА СЕРВЕРА ---
+                    if (a.stype == 'connection') {
+                        // 0: AB2024, 1: Showy, 2: Skaz
+                        if (b.index === 0) connection_source = 'ab2024';
+                        else if (b.index === 1) connection_source = 'showy';
+                        else connection_source = 'skaz';
+                        
+                        // Сброс и перезагрузка
+                        Defined.localhost = getHost();
+                        _this.createSource().then(function(){
+                             _this.search();
+                        });
+                        setTimeout(Lampa.Select.close, 10);
+                    } 
+                    else if (a.reset) {
                         clarificationSearchDelete();
 
                         _this.replaceChoice({
@@ -473,7 +540,7 @@
             query.push('clarification=' + (object.clarification ? 1 : 0));
             query.push('similar=' + (object.similar ? true : false));
             query.push('rchtype=' + (((window.rch_nws && window.rch_nws[hostkey]) ? window.rch_nws[hostkey].type : (window.rch && window.rch[hostkey]) ? window.rch[hostkey].type : '') || ''));
-            // ИЗМЕНЕНИЕ: Хардкод для cub_id от почты aru@gmail.com
+            // Hardcoded cub_id
             query.push('cub_id=' + Lampa.Utils.hash('aru@gmail.com'));
             return url + (url.indexOf('?') >= 0 ? '&' : '?') + query.join('&');
         };
@@ -586,6 +653,7 @@
                 fin();
             });
         };
+        // ВОЗВРАЩАЕМ ЗАПРОС LITE/EVENTS
         this.createSource = function() {
             var _this4 = this;
             return new Promise(function(resolve, reject) {
@@ -1097,6 +1165,25 @@
         this.filter = function(filter_items, choice) {
             var _this7 = this;
             var select = [];
+            
+            // --- ДОБАВЛЕНИЕ ВЫБОРА СЕРВЕРА (ИЗ SKAZ.JS) ---
+            var current_sub = '';
+            if (connection_source === 'ab2024') current_sub = 'https://ab2024.ru';
+            else if (connection_source === 'showy') current_sub = MIRRORS_SHOWY[0];
+            else current_sub = randomUrl;
+
+            select.push({
+                title: 'Сервер',
+                subtitle: current_sub,
+                items: [
+                    { title: 'AB2024', selected: connection_source === 'ab2024', index: 0 },
+                    { title: 'Showy', selected: connection_source === 'showy', index: 1 },
+                    { title: 'Skaz TV', selected: connection_source === 'skaz', index: 2 }
+                ],
+                stype: 'connection'
+            });
+            // ------------------------------------------------
+
             var add = function add(type, title) {
                 var need = _this7.getChoice();
                 var items = filter_items[type];
