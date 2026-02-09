@@ -38,6 +38,7 @@
     function getHost() {
         if (connection_source === 'ab2024') return 'https://ab2024.ru/';
         if (connection_source === 'showy') return MIRRORS_SHOWY[current_showy_index];
+        if (connection_source === 'okeantv') return 'http://cdn.okeantv.fun:10097/';
         return randomUrl; // Skaz
     }
 
@@ -110,7 +111,7 @@
                 rchtype: Lampa.Platform.is('android') ? 'apk' : Lampa.Platform.is('tizen') ? 'cors' : (window.rch_nws[hostkey].type || 'web'),
                 apkVersion: window.rch_nws[hostkey].apkVersion,
                 player: Lampa.Storage.field('player'),
-                account_email: 'aksarus@gmail.com',
+                account_email: 'aru@gmail.com',
                 unic_id: '123',
                 profile_id: Lampa.Storage.get('lampac_profile_id', ''),
                 token: ''
@@ -269,10 +270,16 @@
                 url = Lampa.Utils.addUrlComponent(url, 'showy_token=f8377057-90eb-4d76-93c9-7605952a096l');
             }
         }
+        else if (connection_source === 'okeantv') {
+            // Логика OkeanTV
+            if (url.indexOf('uid=') === -1) {
+                url = Lampa.Utils.addUrlComponent(url, 'uid=guest');
+            }
+        }
         else {
             // Логика Skaz (старая, с хардкодом)
             if (url.indexOf('account_email=') == -1) {
-                url = Lampa.Utils.addUrlComponent(url, 'account_email=aksarus@gmail.com');
+                url = Lampa.Utils.addUrlComponent(url, 'account_email=aru@gmail.com');
             }
             if (url.indexOf('uid=') == -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=123');
@@ -390,9 +397,10 @@
                 if (type == 'filter') {
                     // --- ОБРАБОТКА ВЫБОРА СЕРВЕРА ---
                     if (a.stype == 'connection') {
-                        // 0: AB2024, 1: Showy, 2: Skaz
+                        // 0: AB2024, 1: Showy, 2: Skaz, 3: Okeantv
                         if (b.index === 0) connection_source = 'ab2024';
                         else if (b.index === 1) connection_source = 'showy';
+                        else if (b.index === 3) connection_source = 'okeantv';
                         else connection_source = 'skaz';
                         
                         // Сброс и перезагрузка
@@ -1170,6 +1178,7 @@
             var current_sub = '';
             if (connection_source === 'ab2024') current_sub = 'https://ab2024.ru';
             else if (connection_source === 'showy') current_sub = MIRRORS_SHOWY[0];
+            else if (connection_source === 'okeantv') current_sub = 'cdn.okeantv.fun';
             else current_sub = randomUrl;
 
             select.push({
@@ -1178,7 +1187,8 @@
                 items: [
                     { title: 'AB2024', selected: connection_source === 'ab2024', index: 0 },
                     { title: 'Showy', selected: connection_source === 'showy', index: 1 },
-                    { title: 'Skaz TV', selected: connection_source === 'skaz', index: 2 }
+                    { title: 'Skaz TV', selected: connection_source === 'skaz', index: 2 },
+                    { title: 'cdn.okeantv.fun', selected: connection_source === 'okeantv', index: 3 }
                 ],
                 stype: 'connection'
             });
@@ -2151,6 +2161,4 @@
         $.getScript('http://skaztv.top/play.js');
     }
 
-
 })();
-
