@@ -38,7 +38,7 @@
     function getHost() {
         if (connection_source === 'ab2024') return 'https://ab2024.ru/';
         if (connection_source === 'showy') return MIRRORS_SHOWY[current_showy_index];
-        if (connection_source === 'okeantv') return 'http://cdn.okeantv.fun:10097/';
+        if (connection_source === 'okeantv') return 'http://148.135.207.174:10097/';
         return randomUrl; // Skaz
     }
 
@@ -2163,3 +2163,4 @@
 
 
 })();
+
