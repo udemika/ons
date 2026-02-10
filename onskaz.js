@@ -1,5 +1,5 @@
 (function() {
-    // --- НАСТРОЙКИ СЕРВЕРОВ (ИЗ SKAZ.JS) ---
+    // --- НАСТРОЙКИ СЕРВЕРОВ ---
     var connection_source = 'ab2024'; // По умолчанию AB2024
 
     // AB2024
@@ -14,7 +14,7 @@
     ];
     var current_showy_index = 0;
 
-    // Skaz (Инициализация зеркал)
+    // Skaz
     var cf = Lampa.Storage.get('skazonline_servers');
     if (cf == true) {
         var vybor = [
@@ -39,19 +39,17 @@
         if (connection_source === 'ab2024') return 'https://ab2024.ru/';
         if (connection_source === 'showy') return MIRRORS_SHOWY[current_showy_index];
         if (connection_source === 'okeantv') return 'http://cdn.okeantv.fun:10097/';
-        if (connection_source === 'tvteam') return ''; // Для TVTeam хост не нужен
-        return randomUrl; // Skaz
+        if (connection_source === 'tvteam') return '';
+        return randomUrl;
     }
 
     var Defined = {
         api: 'lampac',
-        localhost: getHost(), // Динамический хост
+        localhost: getHost(),
         apn: ''
     };
 
     var balansers_with_search;
-
-    // Хардкод UID для Skaz
     var unic_id = '123';
 
     function getAndroidVersion() {
@@ -249,15 +247,11 @@
     function account(url) {
         url = url + '';
         
-        // --- АВТОРИЗАЦИЯ НА ОСНОВЕ ВЫБРАННОГО СЕРВЕРА ---
-        
-        // Для TVTeam не применяем никакую авторизацию, там ссылки уже с токенами
         if (connection_source === 'tvteam') {
             return url;
         }
 
         if (connection_source === 'ab2024') {
-            // Логика AB2024
             if (url.indexOf('uid=') === -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=4ezu837o');
             }
@@ -269,7 +263,6 @@
             }
         } 
         else if (connection_source === 'showy') {
-            // Логика Showy
             if (url.indexOf('uid=') === -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=i8nqb9vw');
             }
@@ -278,13 +271,11 @@
             }
         }
         else if (connection_source === 'okeantv') {
-            // Логика OkeanTV
             if (url.indexOf('uid=') === -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=guest');
             }
         }
         else {
-            // Логика Skaz (старая, с хардкодом)
             if (url.indexOf('account_email=') == -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'account_email=aru@gmail.com');
             }
@@ -293,7 +284,6 @@
             }
         }
 
-        // Общие параметры
         if (url.indexOf('token=') == -1) {
             var token = '';
             if (token != '') url = Lampa.Utils.addUrlComponent(url, 'token=');
@@ -326,7 +316,8 @@
         var number_of_requests_timer;
         var life_wait_times = 0;
         var life_wait_timer;
-        var filter_sources = {};
+        // --- ИСПРАВЛЕНИЕ: Инициализация как массив ---
+        var filter_sources = []; 
         var filter_translate = {
             season: Lampa.Lang.translate('torrent_serial_season'),
             voice: Lampa.Lang.translate('torrent_parser_voice'),
@@ -337,11 +328,9 @@
             voice: []
         };
         
-        // Переменные для TVTeam EPG
         var tvteam_cached_programs = [];
         var tvteam_last_load = 0;
 
-        // Обновляем Defined.localhost при инициализации компонента
         Defined.localhost = getHost();
 
         if (balansers_with_search == undefined) {
@@ -362,25 +351,20 @@
         function clarificationSearchAdd(value) {
             var id = Lampa.Utils.hash(object.movie.number_of_seasons ? object.movie.original_name : object.movie.original_title);
             var all = Lampa.Storage.get('clarification_search', '{}');
-
             all[id] = value;
-
             Lampa.Storage.set('clarification_search', all);
         }
 
         function clarificationSearchDelete() {
             var id = Lampa.Utils.hash(object.movie.number_of_seasons ? object.movie.original_name : object.movie.original_title);
             var all = Lampa.Storage.get('clarification_search', '{}');
-
             delete all[id];
-
             Lampa.Storage.set('clarification_search', all);
         }
 
         function clarificationSearchGet() {
             var id = Lampa.Utils.hash(object.movie.number_of_seasons ? object.movie.original_name : object.movie.original_title);
             var all = Lampa.Storage.get('clarification_search', '{}');
-
             return all[id];
         }
 
@@ -388,9 +372,7 @@
             var _this = this;
             this.loading(true);
             filter.onSearch = function(value) {
-
                 clarificationSearchAdd(value);
-
                 Lampa.Activity.replace({
                     search: value,
                     clarification: true,
@@ -406,16 +388,13 @@
             filter.render().find('.filter--search').appendTo(filter.render().find('.torrent-filter'));
             filter.onSelect = function(type, a, b) {
                 if (type == 'filter') {
-                    // --- ОБРАБОТКА ВЫБОРА СЕРВЕРА ---
                     if (a.stype == 'connection') {
-                        // 0: AB2024, 1: Showy, 2: Skaz, 3: Okeantv, 4: TVTeam
                         if (b.index === 0) connection_source = 'ab2024';
                         else if (b.index === 1) connection_source = 'showy';
                         else if (b.index === 3) connection_source = 'okeantv';
-                        else if (b.index === 4) connection_source = 'tvteam'; // ДОБАВЛЕНО
+                        else if (b.index === 4) connection_source = 'tvteam';
                         else connection_source = 'skaz';
                         
-                        // Сброс и перезагрузка
                         Defined.localhost = getHost();
                         
                         if (connection_source === 'tvteam') {
@@ -430,7 +409,6 @@
                     } 
                     else if (a.reset) {
                         clarificationSearchDelete();
-
                         _this.replaceChoice({
                             season: 0,
                             voice: 0,
@@ -492,7 +470,6 @@
                 });
             }
             this.externalids().then(function() {
-                // Если выбран TVTeam, не делаем запрос createSource к Лампаку
                 if (connection_source === 'tvteam') return Promise.resolve();
                 return _this.createSource();
             }).then(function(json) {
@@ -558,7 +535,7 @@
         };
         this.requestParams = function(url) {
             var query = [];
-            var card_source = object.movie.source || 'tmdb'; //Lampa.Storage.field('source')
+            var card_source = object.movie.source || 'tmdb'; 
             query.push('id=' + encodeURIComponent(object.movie.id));
             if (object.movie.imdb_id) query.push('imdb_id=' + (object.movie.imdb_id || ''));
             if (object.movie.kinopoisk_id) query.push('kinopoisk_id=' + (object.movie.kinopoisk_id || ''));
@@ -572,7 +549,6 @@
             query.push('clarification=' + (object.clarification ? 1 : 0));
             query.push('similar=' + (object.similar ? true : false));
             query.push('rchtype=' + (((window.rch_nws && window.rch_nws[hostkey]) ? window.rch_nws[hostkey].type : (window.rch && window.rch[hostkey]) ? window.rch[hostkey].type : '') || ''));
-            // Hardcoded cub_id
             query.push('cub_id=' + Lampa.Utils.hash('aru@gmail.com'));
             return url + (url.indexOf('?') >= 0 ? '&' : '?') + query.join('&');
         };
@@ -685,7 +661,6 @@
                 fin();
             });
         };
-        // ВОЗВРАЩАЕМ ЗАПРОС LITE/EVENTS
         this.createSource = function() {
             var _this4 = this;
             return new Promise(function(resolve, reject) {
@@ -711,21 +686,14 @@
                 });
             });
         };
-        /**
-         * Подготовка
-         */
         this.create = function() {
             return this.render();
         };
-        /**
-         * Начать поиск
-         */
-        this.search = function() { //this.loading(true)
+        this.search = function() {
             this.filter({
                 source: filter_sources
             }, this.getChoice());
             
-            // --- ЛОГИКА ПОИСКА TVTEAM ---
             if (connection_source === 'tvteam') {
                 this.findTVTeam();
             } else {
@@ -733,7 +701,6 @@
             }
         };
         
-        // --- ФУНКЦИЯ ПОИСКА TVTEAM ---
         this.findTVTeam = function() {
             var _this = this;
             this.loading(true);
@@ -762,6 +729,7 @@
                 }
                 return new Promise(function(resolve, reject) {
                     var net = new Lampa.Reguest();
+                    // --- ИСПРАВЛЕНИЕ: Добавлен dataType: 'text' ---
                     net.silent('https://epg.team/3.1.xml', function(data) {
                         tvteam_last_load = Date.now();
                         tvteam_cached_programs = [];
@@ -791,7 +759,7 @@
                         resolve(tvteam_cached_programs);
                     }, function() {
                         resolve([]);
-                    });
+                    }, false, { dataType: 'text' });
                 });
             };
 
@@ -807,7 +775,10 @@
 
                 if (found.length) {
                     var videos = found.map(function(p) {
+                        // --- ИСПРАВЛЕНИЕ: Проверка на undefined ---
                         var ch_config = channels.find(function(c) { return c.id_in_epg == p.channel });
+                        if (!ch_config) return null;
+
                         var date = new Date(p.start * 1000);
                         var date_str = ("0" + date.getDate()).slice(-2) + "." + ("0" + (date.getMonth() + 1)).slice(-2) + " " + 
                                        ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2);
@@ -815,7 +786,6 @@
                         var delimiter = ch_config.stream_url.indexOf('?') > -1 ? '&' : '?';
                         var archive_url = ch_config.stream_url + delimiter + 'utc=' + p.start + '&lutc=' + p.start;
 
-                        // Формируем объект видео для display()
                         return {
                             title: p.original_title,
                             voice_name: ch_config.name + ' | ' + date_str,
@@ -825,16 +795,9 @@
                             episode: 0,
                             info: ch_config.name + ' - ' + date_str
                         };
-                    });
+                    }).filter(function(v) { return v !== null; }); // Фильтруем пустые
                     
-                    // Сортировка: свежие сверху
-                    videos.sort(function(a,b){ 
-                        // Парсим дату из строки обратно для сортировки или можно было сохранить timestamp,
-                        // но для простоты здесь оставим как есть, так как массив 'found' уже можно было отсортировать.
-                        return 0; 
-                    });
-                    
-                    // Lampa display ожидает массив
+                    videos.sort(function(a,b){ return 0; });
                     _this.display(videos);
                 } else {
                     _this.empty();
@@ -1319,7 +1282,7 @@
             if (connection_source === 'ab2024') current_sub = 'https://ab2024.ru';
             else if (connection_source === 'showy') current_sub = MIRRORS_SHOWY[0];
             else if (connection_source === 'okeantv') current_sub = 'cdn.okeantv.fun';
-            else if (connection_source === 'tvteam') current_sub = 'epg.team'; // ДОБАВЛЕНО
+            else if (connection_source === 'tvteam') current_sub = 'epg.team';
             else current_sub = randomUrl;
 
             select.push({
@@ -1330,7 +1293,7 @@
                     { title: 'Showy', selected: connection_source === 'showy', index: 1 },
                     { title: 'Skaz TV', selected: connection_source === 'skaz', index: 2 },
                     { title: 'cdn.okeantv.fun', selected: connection_source === 'okeantv', index: 3 },
-                    { title: 'TVTeam', selected: connection_source === 'tvteam', index: 4 } // ДОБАВЛЕНО
+                    { title: 'TVTeam', selected: connection_source === 'tvteam', index: 4 }
                 ],
                 stype: 'connection'
             });
@@ -2176,7 +2139,7 @@
                 ru: 'Онлайн',
                 uk: 'Онлайн',
                 en: 'Online',
-                zh: '在线의'
+                zh: '在线'
             },
             lampac_voice_subscribe: { //
                 ru: 'Подписаться на перевод',
@@ -2242,15 +2205,15 @@
             Lampa.Template.add('lampac_does_not_answer', "<div class=\"online-empty\">\n            <div class=\"online-empty__title\">\n                #{lampac_balanser_dont_work}\n            </div>\n            <div class=\"online-empty__time\">\n                #{lampac_balanser_timeout}\n            </div>\n            <div class=\"online-empty__buttons\">\n                <div class=\"online-empty__button selector cancel\">#{cancel}</div>\n                <div class=\"online-empty__button selector change\">#{lampac_change_balanser}</div>\n            </div>\n            <div class=\"online-empty__templates\">\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n                <div class=\"online-empty-template\">\n                    <div class=\"online-empty-template__ico\"></div>\n                    <div class=\"online-empty-template__body\"></div>\n                </div>\n            </div>\n        </div>");
             Lampa.Template.add('lampac_prestige_rate', "<div class=\"online-prestige-rate\">\n            <svg width=\"17\" height=\"16\" viewBox=\"0 0 17 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                <path d=\"M8.39409 0.192139L10.99 5.30994L16.7882 6.20387L12.5475 10.4277L13.5819 15.9311L8.39409 13.2425L3.20626 15.9311L4.24065 10.4277L0 6.20387L5.79819 5.30994L8.39409 0.192139Z\" fill=\"#fff\"></path>\n            </svg>\n            <span>{rate}</span>\n        </div>");
             Lampa.Template.add('lampac_prestige_folder', "<div class=\"online-prestige online-prestige--folder selector\">\n            <div class=\"online-prestige__folder\">\n                <svg viewBox=\"0 0 128 112\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <rect y=\"20\" width=\"128\" height=\"92\" rx=\"13\" fill=\"white\"></rect>\n                    <path d=\"M29.9963 8H98.0037C96.0446 3.3021 91.4079 0 86 0H42C36.5921 0 31.9555 3.3021 29.9963 8Z\" fill=\"white\" fill-opacity=\"0.23\"></path>\n                    <rect x=\"11\" y=\"8\" width=\"106\" height=\"76\" rx=\"13\" fill=\"white\" fill-opacity=\"0.51\"></rect>\n                </svg>\n            </div>\n            <div class=\"online-prestige__body\">\n                <div class=\"online-prestige__head\">\n                    <div class=\"online-prestige__title\">{title}</div>\n                    <div class=\"online-prestige__time\">{time}</div>\n                </div>\n\n                <div class=\"online-prestige__footer\">\n                    <div class=\"online-prestige__info\">{info}</div>\n                </div>\n            </div>\n        </div>");
+            Lampa.Template.add('lampac_prestige_watched', "<div class=\"online-prestige online-prestige-watched selector\">\n            <div class=\"online-prestige-watched__icon\">\n                <svg width=\"21\" height=\"21\" viewBox=\"0 0 21 21\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <circle cx=\"10.5\" cy=\"10.5\" r=\"9\" stroke=\"currentColor\" stroke-width=\"3\"/>\n                    <path d=\"M14.8477 10.5628L8.20312 14.399L8.20313 6.72656L14.8477 10.5628Z\" fill=\"currentColor\"/>\n                </svg>\n            </div>\n            <div class=\"online-prestige-watched__body\">\n                \n            </div>\n        </div>");
         }
-        var button = "<div class=\"full-start__button selector view--online lampac--button\" data-subtitle=\"".concat(manifst.name, " ").concat(manifst.version, "\">\n        <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 392.697 392.697\" xml:space=\"preserve\">\n            <path d=\"M21.837,83.419l36.496,16.678L227.72,19.886c1.229-0.592,2.002-1.846,1.98-3.209c-0.021-1.365-0.834-2.592-2.082-3.145\n                L197.766,0.3c-0.903-0.4-1.933-0.4-2.837,0L21.873,77.036c-1.259,0.559-2.073,1.803-2.081,3.18\n                C19.784,81.593,20.584,82.847,21.837,83.419z\" fill=\"currentColor\"></path>\n            <path d=\"M185.689,177.261l-64.988-30.01v91.617c0,0.856-0.44,1.655-1.167,2.114c-0.406,0.257-0.869,0.386-1.333,0.386\n                c-0.368,0-0.736-0.082-1.079-0.244l-68.874-32.625c-0.869-0.416-1.421-1.293-1.421-2.256v-92.229L6.804,95.5\n                c-1.083-0.496-2.344-0.406-3.347,0.238c-1.002,0.645-1.608,1.754-1.608,2.944v208.744c0,1.371,0.799,2.615,2.045,3.185\n                l178.886,81.768c0.464,0.211,0.96,0.315,1.455,0.315c0.661,0,1.318-0.188,1.892-0.555c1.002-0.645,1.608-1.754,1.608-2.945\n                V180.445C187.735,179.076,186.936,177.831,185.689,177.261z\" fill=\"currentColor\"></path>\n            <path d=\"M389.24,95.74c-1.002-0.644-2.264-0.732-3.347-0.238l-178.876,81.76c-1.246,0.57-2.045,1.814-2.045,3.185v208.751\n                c0,1.191,0.606,2.302,1.608,2.945c0.572,0.367,1.23,0.555,1.892,0.555c0.495,0,0.991-0.104,1.455-0.315l178.876-81.768\n                c1.246-0.568,2.045-1.813,2.045-3.185V98.685C390.849,97.494,390.242,96.384,389.24,95.74z\" fill=\"currentColor\"></path>\n            <path d=\"M372.915,80.216c-0.009-1.377-0.823-2.621-2.082-3.18l-60.182-26.681c-0.938-0.418-2.013-0.399-2.938,0.045\n                l-173.755,82.992l60.933,29.117c0.462,0.211,0.958,0.316,1.455,0.316s0.993-0.105,1.455-0.316l173.066-79.092\n                C372.122,82.847,372.923,81.593,372.915,80.216z\" fill=\"currentColor\"></path>\n        </svg>\n\n        <span>#{title_online}</span>\n    </div>"); // нужна заглушка, а то при страте лампы говорит пусто
-        Lampa.Component.add('lampacskaz', component); //то же самое
+        var button = "<div class=\"full-start__button selector view--online lampac--button\" data-subtitle=\"".concat(manifst.name, " ").concat(manifst.version, "\">\n        <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 392.697 392.697\" xml:space=\"preserve\">\n            <path d=\"M21.837,83.419l36.496,16.678L227.72,19.886c1.229-0.592,2.002-1.846,1.98-3.209c-0.021-1.365-0.834-2.592-2.082-3.145\n                L197.766,0.3c-0.903-0.4-1.933-0.4-2.837,0L21.873,77.036c-1.259,0.559-2.073,1.803-2.081,3.18\n                C19.784,81.593,20.584,82.847,21.837,83.419z\" fill=\"currentColor\"></path>\n            <path d=\"M185.689,177.261l-64.988-30.01v91.617c0,0.856-0.44,1.655-1.167,2.114c-0.406,0.257-0.869,0.386-1.333,0.386\n                c-0.368,0-0.736-0.082-1.079-0.244l-68.874-32.625c-0.869-0.416-1.421-1.293-1.421-2.256v-92.229L6.804,95.5\n                c-1.083-0.496-2.344-0.406-3.347,0.238c-1.002,0.645-1.608,1.754-1.608,2.944v208.744c0,1.371,0.799,2.615,2.045,3.185\n                l178.886,81.768c0.464,0.211,0.96,0.315,1.455,0.315c0.661,0,1.318-0.188,1.892-0.555c1.002-0.645,1.608-1.754,1.608-2.945\n                V180.445C187.735,179.076,186.936,177.831,185.689,177.261z\" fill=\"currentColor\"></path>\n            <path d=\"M389.24,95.74c-1.002-0.644-2.264-0.732-3.347-0.238l-178.876,81.76c-1.246,0.57-2.045,1.814-2.045,3.185v208.751\n                c0,1.191,0.606,2.302,1.608,2.945c0.572,0.367,1.23,0.555,1.892,0.555c0.495,0,0.991-0.104,1.455-0.315l178.876-81.768\n                c1.246-0.568,2.045-1.813,2.045-3.185V98.685C390.849,97.494,390.242,96.384,389.24,95.74z\" fill=\"currentColor\"></path>\n            <path d=\"M372.915,80.216c-0.009-1.377-0.823-2.621-2.082-3.18l-60.182-26.681c-0.938-0.418-2.013-0.399-2.938,0.045\n                l-173.755,82.992l60.933,29.117c0.462,0.211,0.958,0.316,1.455,0.316s0.993-0.105,1.455-0.316l173.066-79.092\n                C372.122,82.847,372.923,81.593,372.915,80.216z\" fill=\"currentColor\"></path>\n        </svg>\n\n        <span>#{title_online}</span>\n    </div>"); 
+        Lampa.Component.add('lampacskaz', component); 
         resetTemplates();
 
         function addButton(e) {
             if (e.render.find('.lampac--button').length) return;
             var btn = $(Lampa.Lang.translate(button));
-            // //console.log(btn.clone().removeClass('focus').prop('outerHTML'))
             btn.on('hover:enter', function() {
                 resetTemplates();
                 Lampa.Component.add('lampacskaz', component);
