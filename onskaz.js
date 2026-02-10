@@ -1,5 +1,5 @@
 (function() {
-    // --- НАСТРОЙКИ СЕРВЕРОВ ---
+    // --- НАСТРОЙКИ СЕРВЕРОВ (ИЗ SKAZ.JS) ---
     var connection_source = 'ab2024'; // По умолчанию AB2024
 
     // AB2024
@@ -14,7 +14,7 @@
     ];
     var current_showy_index = 0;
 
-    // Skaz
+    // Skaz (Инициализация зеркал)
     var cf = Lampa.Storage.get('skazonline_servers');
     if (cf == true) {
         var vybor = [
@@ -39,17 +39,18 @@
         if (connection_source === 'ab2024') return 'https://ab2024.ru/';
         if (connection_source === 'showy') return MIRRORS_SHOWY[current_showy_index];
         if (connection_source === 'okeantv') return 'http://cdn.okeantv.fun:10097/';
-        if (connection_source === 'tvteam') return '';
-        return randomUrl;
+        return randomUrl; // Skaz
     }
 
     var Defined = {
         api: 'lampac',
-        localhost: getHost(),
+        localhost: getHost(), // Динамический хост
         apn: ''
     };
 
     var balansers_with_search;
+
+    // Хардкод UID для Skaz
     var unic_id = '123';
 
     function getAndroidVersion() {
@@ -247,11 +248,9 @@
     function account(url) {
         url = url + '';
         
-        if (connection_source === 'tvteam') {
-            return url;
-        }
-
+        // --- АВТОРИЗАЦИЯ НА ОСНОВЕ ВЫБРАННОГО СЕРВЕРА (ИЗ SKAZ.JS) ---
         if (connection_source === 'ab2024') {
+            // Логика AB2024
             if (url.indexOf('uid=') === -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=4ezu837o');
             }
@@ -263,6 +262,7 @@
             }
         } 
         else if (connection_source === 'showy') {
+            // Логика Showy
             if (url.indexOf('uid=') === -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=i8nqb9vw');
             }
@@ -271,11 +271,13 @@
             }
         }
         else if (connection_source === 'okeantv') {
+            // Логика OkeanTV
             if (url.indexOf('uid=') === -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=guest');
             }
         }
         else {
+            // Логика Skaz (старая, с хардкодом)
             if (url.indexOf('account_email=') == -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'account_email=aru@gmail.com');
             }
@@ -284,6 +286,7 @@
             }
         }
 
+        // Общие параметры
         if (url.indexOf('token=') == -1) {
             var token = '';
             if (token != '') url = Lampa.Utils.addUrlComponent(url, 'token=');
@@ -316,8 +319,7 @@
         var number_of_requests_timer;
         var life_wait_times = 0;
         var life_wait_timer;
-        // --- ИСПРАВЛЕНИЕ: Инициализация как массив ---
-        var filter_sources = []; 
+        var filter_sources = {};
         var filter_translate = {
             season: Lampa.Lang.translate('torrent_serial_season'),
             voice: Lampa.Lang.translate('torrent_parser_voice'),
@@ -327,10 +329,8 @@
             season: [],
             voice: []
         };
-        
-        var tvteam_cached_programs = [];
-        var tvteam_last_load = 0;
 
+        // Обновляем Defined.localhost при инициализации компонента
         Defined.localhost = getHost();
 
         if (balansers_with_search == undefined) {
@@ -351,20 +351,25 @@
         function clarificationSearchAdd(value) {
             var id = Lampa.Utils.hash(object.movie.number_of_seasons ? object.movie.original_name : object.movie.original_title);
             var all = Lampa.Storage.get('clarification_search', '{}');
+
             all[id] = value;
+
             Lampa.Storage.set('clarification_search', all);
         }
 
         function clarificationSearchDelete() {
             var id = Lampa.Utils.hash(object.movie.number_of_seasons ? object.movie.original_name : object.movie.original_title);
             var all = Lampa.Storage.get('clarification_search', '{}');
+
             delete all[id];
+
             Lampa.Storage.set('clarification_search', all);
         }
 
         function clarificationSearchGet() {
             var id = Lampa.Utils.hash(object.movie.number_of_seasons ? object.movie.original_name : object.movie.original_title);
             var all = Lampa.Storage.get('clarification_search', '{}');
+
             return all[id];
         }
 
@@ -372,7 +377,9 @@
             var _this = this;
             this.loading(true);
             filter.onSearch = function(value) {
+
                 clarificationSearchAdd(value);
+
                 Lampa.Activity.replace({
                     search: value,
                     clarification: true,
@@ -388,27 +395,24 @@
             filter.render().find('.filter--search').appendTo(filter.render().find('.torrent-filter'));
             filter.onSelect = function(type, a, b) {
                 if (type == 'filter') {
+                    // --- ОБРАБОТКА ВЫБОРА СЕРВЕРА ---
                     if (a.stype == 'connection') {
+                        // 0: AB2024, 1: Showy, 2: Skaz, 3: Okeantv
                         if (b.index === 0) connection_source = 'ab2024';
                         else if (b.index === 1) connection_source = 'showy';
                         else if (b.index === 3) connection_source = 'okeantv';
-                        else if (b.index === 4) connection_source = 'tvteam';
                         else connection_source = 'skaz';
                         
+                        // Сброс и перезагрузка
                         Defined.localhost = getHost();
-                        
-                        if (connection_source === 'tvteam') {
-                            _this.search();
-                            setTimeout(Lampa.Select.close, 10);
-                        } else {
-                            _this.createSource().then(function(){
-                                 _this.search();
-                            });
-                            setTimeout(Lampa.Select.close, 10);
-                        }
+                        _this.createSource().then(function(){
+                             _this.search();
+                        });
+                        setTimeout(Lampa.Select.close, 10);
                     } 
                     else if (a.reset) {
                         clarificationSearchDelete();
+
                         _this.replaceChoice({
                             season: 0,
                             voice: 0,
@@ -470,17 +474,12 @@
                 });
             }
             this.externalids().then(function() {
-                if (connection_source === 'tvteam') return Promise.resolve();
                 return _this.createSource();
             }).then(function(json) {
-                if (connection_source !== 'tvteam') {
-                    if (!balansers_with_search.find(function(b) {
-                            return balanser.slice(0, b.length) == b;
-                        })) {
-                        filter.render().find('.filter--search').addClass('hide');
-                    }
-                } else {
-                     filter.render().find('.filter--search').removeClass('hide');
+                if (!balansers_with_search.find(function(b) {
+                        return balanser.slice(0, b.length) == b;
+                    })) {
+                    filter.render().find('.filter--search').addClass('hide');
                 }
                 _this.search();
             })["catch"](function(e) {
@@ -535,7 +534,7 @@
         };
         this.requestParams = function(url) {
             var query = [];
-            var card_source = object.movie.source || 'tmdb'; 
+            var card_source = object.movie.source || 'tmdb'; //Lampa.Storage.field('source')
             query.push('id=' + encodeURIComponent(object.movie.id));
             if (object.movie.imdb_id) query.push('imdb_id=' + (object.movie.imdb_id || ''));
             if (object.movie.kinopoisk_id) query.push('kinopoisk_id=' + (object.movie.kinopoisk_id || ''));
@@ -549,6 +548,7 @@
             query.push('clarification=' + (object.clarification ? 1 : 0));
             query.push('similar=' + (object.similar ? true : false));
             query.push('rchtype=' + (((window.rch_nws && window.rch_nws[hostkey]) ? window.rch_nws[hostkey].type : (window.rch && window.rch[hostkey]) ? window.rch[hostkey].type : '') || ''));
+            // Hardcoded cub_id
             query.push('cub_id=' + Lampa.Utils.hash('aru@gmail.com'));
             return url + (url.indexOf('?') >= 0 ? '&' : '?') + query.join('&');
         };
@@ -661,6 +661,7 @@
                 fin();
             });
         };
+        // ВОЗВРАЩАЕМ ЗАПРОС LITE/EVENTS
         this.createSource = function() {
             var _this4 = this;
             return new Promise(function(resolve, reject) {
@@ -686,125 +687,21 @@
                 });
             });
         };
+        /**
+         * Подготовка
+         */
         this.create = function() {
             return this.render();
         };
-        this.search = function() {
+        /**
+         * Начать поиск
+         */
+        this.search = function() { //this.loading(true)
             this.filter({
                 source: filter_sources
             }, this.getChoice());
-            
-            if (connection_source === 'tvteam') {
-                this.findTVTeam();
-            } else {
-                this.find();
-            }
+            this.find();
         };
-        
-        this.findTVTeam = function() {
-            var _this = this;
-            this.loading(true);
-            
-            var channels = [
-                { id_in_epg: 'ch849', name: 'BCU Ultra 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch849/index.m3u8?token=vufyosil.v2_6CJ3PefrhEUqTPQZ321-Wf3rxO5Wdgq-olS5HMX9h57d703ZKkI2ka_aOQXxLrGaJjCF968e8dvK' },
-                { id_in_epg: 'ch553', name: 'BCU Premiere Ultra 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch553/index.m3u8?token=vufyosil.v2_sjf7KZlOWhFmE-BxM5bwd8vbRa7TVmb8djE37lAQHQCP3WuMxroVe5qtn1BdKPCsQgyKP35qM24Z' },
-                { id_in_epg: 'ch2063', name: 'Yosso TV Советские 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch2063/index.m3u8?token=vufyosil.v2_u1-UKPXXCYGchYuCstiq235K-lCGRGrGQ63svPTjN6bWqcroJAdBoPfEGYLd37_ES-L2nrJc8JlhwA' },
-                { id_in_epg: 'ch2931', name: 'BOX UltraStars 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch2931/index.m3u8?token=vufyosil.v2_d5a8wiTDEMVFDXDO9tGV_iqN1i9gUszPfbzpBcd8uV_86lGECdd1--Jep6-5f9_NO0w-NjKUqqZBkA' },
-                { id_in_epg: 'ch2297', name: 'BOX Premiere 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch2297/index.m3u8?token=vufyosil.v2_VXt7lOQ8PYB3JJmJrI4nD5Z6S8Heo9h0W0HrEz815VCuAiEYuHiq980IHt69_1O90TLac0vOtQhIXw' },
-                { id_in_epg: 'ch2299', name: 'BOX Remast 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch2299/index.m3u8?token=vufyosil.v2_Mkjsvb10s26MVwv7Jo5JpAVvb7cYpgjJRaBhwAfaplezlhYtT9ySBCID5EeP_tvPxKhquQj0Cfds1g' },
-                { id_in_epg: 'ch2926', name: 'BOX СССР 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch2926/index.m3u8?token=vufyosil.v2_wjWxrQxS2ydDwghp05vjmSWyD33rknHqE_5H0H74dBN4csTZpccywfcb7nnWaiqzX9pqKim8vDKRtw' },
-                { id_in_epg: 'ch1949', name: 'BOX Russian 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch1949/index.m3u8?token=vufyosil.v2_jHtfU74QBAMvWJqLyrTkTdlmzIGIKnAHimAUOWPzQHeIMMy9GAUuhjdHTWLopZ-c_gpSs6NMkef8Yw' },
-                { id_in_epg: 'ch2033', name: 'BOX Serial 4K HDR', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch2033/index.m3u8?token=vufyosil.v2_GzNZ8dlRb5QBoFbJ3G2QyJ7fD7O5hR0lvLcahuX5bQvOBg6WEgsoxhLDXzYQO-a6C-otChHjZblIQw' },
-                { id_in_epg: 'ch496', name: 'Yosso TV 4K HDR', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch496/index.m3u8?token=vufyosil.v2_VZ3TpVS8VZFFl3E9cZLeRMDMAwjbaJziYqzj3quW9OjSNgghYc6h3eiYCdypYqR57jgsl9oSiu7P' },
-                { id_in_epg: 'ch1316', name: 'Yosso TV 4K', stream_url: 'https://apn9.akter-black.com/http://16.tvtm.one/ch1316/index.m3u8?token=vufyosil.v2_qQlZFgea_bf67J4F5ukcvILdSj6bXCifSvovBoLhE4c9W7blYU1M0hfhoOK5PQ3ajtwZGiywqgZByQ' }
-            ];
-
-            var archive_depth = 72; // 3 дня
-            var query = (object.clarification ? object.search : object.movie.title || object.movie.name).toLowerCase().trim();
-
-            var loadEPG = function() {
-                var now = Date.now();
-                if (tvteam_cached_programs.length && (now - tvteam_last_load < 3600 * 1000)) {
-                    return Promise.resolve(tvteam_cached_programs);
-                }
-                return new Promise(function(resolve, reject) {
-                    var net = new Lampa.Reguest();
-                    // --- ИСПРАВЛЕНИЕ: Добавлен dataType: 'text' ---
-                    net.silent('https://epg.team/3.1.xml', function(data) {
-                        tvteam_last_load = Date.now();
-                        tvteam_cached_programs = [];
-                        
-                        var target_ids = channels.map(function(c) { return c.id_in_epg; });
-                        var regex = /<programme[^>]*start="(\d+)\s?.*?"[^>]*channel="([^"]+)"[\s\S]*?<title[^>]*>([^<]+)<\/title>/g;
-                        var match;
-                        
-                        while ((match = regex.exec(data)) !== null) {
-                            var start_raw = match[1];
-                            var channel_id = match[2];
-                            var title = match[3];
-
-                            if (target_ids.indexOf(channel_id) !== -1) {
-                                var y = start_raw.substr(0,4), m = start_raw.substr(4,2), d = start_raw.substr(6,2);
-                                var h = start_raw.substr(8,2), min = start_raw.substr(10,2), s = start_raw.substr(12,2);
-                                var time_unix = new Date(y, m-1, d, h, min, s).getTime() / 1000;
-
-                                tvteam_cached_programs.push({
-                                    title: title.toLowerCase(),
-                                    original_title: title,
-                                    start: time_unix,
-                                    channel: channel_id
-                                });
-                            }
-                        }
-                        resolve(tvteam_cached_programs);
-                    }, function() {
-                        resolve([]);
-                    }, false, { dataType: 'text' });
-                });
-            };
-
-            loadEPG().then(function(programs) {
-                var now_sec = Math.floor(Date.now() / 1000);
-                var archive_start = now_sec - (archive_depth * 3600);
-                
-                var found = programs.filter(function(p) {
-                    var match = p.title.indexOf(query) !== -1;
-                    var in_time = p.start > archive_start && p.start < now_sec;
-                    return match && in_time;
-                });
-
-                if (found.length) {
-                    var videos = found.map(function(p) {
-                        // --- ИСПРАВЛЕНИЕ: Проверка на undefined ---
-                        var ch_config = channels.find(function(c) { return c.id_in_epg == p.channel });
-                        if (!ch_config) return null;
-
-                        var date = new Date(p.start * 1000);
-                        var date_str = ("0" + date.getDate()).slice(-2) + "." + ("0" + (date.getMonth() + 1)).slice(-2) + " " + 
-                                       ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2);
-                        
-                        var delimiter = ch_config.stream_url.indexOf('?') > -1 ? '&' : '?';
-                        var archive_url = ch_config.stream_url + delimiter + 'utc=' + p.start + '&lutc=' + p.start;
-
-                        return {
-                            title: p.original_title,
-                            voice_name: ch_config.name + ' | ' + date_str,
-                            quality: { 'Archive': archive_url },
-                            url: archive_url,
-                            season: 0,
-                            episode: 0,
-                            info: ch_config.name + ' - ' + date_str
-                        };
-                    }).filter(function(v) { return v !== null; }); // Фильтруем пустые
-                    
-                    videos.sort(function(a,b){ return 0; });
-                    _this.display(videos);
-                } else {
-                    _this.empty();
-                }
-            });
-        };
-
         this.find = function() {
             this.request(this.requestParams(source));
         };
@@ -1282,7 +1179,6 @@
             if (connection_source === 'ab2024') current_sub = 'https://ab2024.ru';
             else if (connection_source === 'showy') current_sub = MIRRORS_SHOWY[0];
             else if (connection_source === 'okeantv') current_sub = 'cdn.okeantv.fun';
-            else if (connection_source === 'tvteam') current_sub = 'epg.team';
             else current_sub = randomUrl;
 
             select.push({
@@ -1292,8 +1188,7 @@
                     { title: 'AB2024', selected: connection_source === 'ab2024', index: 0 },
                     { title: 'Showy', selected: connection_source === 'showy', index: 1 },
                     { title: 'Skaz TV', selected: connection_source === 'skaz', index: 2 },
-                    { title: 'cdn.okeantv.fun', selected: connection_source === 'okeantv', index: 3 },
-                    { title: 'TVTeam', selected: connection_source === 'tvteam', index: 4 }
+                    { title: 'cdn.okeantv.fun', selected: connection_source === 'okeantv', index: 3 }
                 ],
                 stype: 'connection'
             });
@@ -2114,7 +2009,7 @@
             lampac_no_watch_history: {
                 ru: 'Нет истории просмотра',
                 en: 'No browsing history',
-                ua: 'Немає истории перегляду',
+                ua: 'Немає історії перегляду',
                 zh: '没有浏览历史'
             },
             lampac_nolink: {
@@ -2139,7 +2034,7 @@
                 ru: 'Онлайн',
                 uk: 'Онлайн',
                 en: 'Online',
-                zh: '在线'
+                zh: '在线的'
             },
             lampac_voice_subscribe: { //
                 ru: 'Подписаться на перевод',
@@ -2207,13 +2102,14 @@
             Lampa.Template.add('lampac_prestige_folder', "<div class=\"online-prestige online-prestige--folder selector\">\n            <div class=\"online-prestige__folder\">\n                <svg viewBox=\"0 0 128 112\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <rect y=\"20\" width=\"128\" height=\"92\" rx=\"13\" fill=\"white\"></rect>\n                    <path d=\"M29.9963 8H98.0037C96.0446 3.3021 91.4079 0 86 0H42C36.5921 0 31.9555 3.3021 29.9963 8Z\" fill=\"white\" fill-opacity=\"0.23\"></path>\n                    <rect x=\"11\" y=\"8\" width=\"106\" height=\"76\" rx=\"13\" fill=\"white\" fill-opacity=\"0.51\"></rect>\n                </svg>\n            </div>\n            <div class=\"online-prestige__body\">\n                <div class=\"online-prestige__head\">\n                    <div class=\"online-prestige__title\">{title}</div>\n                    <div class=\"online-prestige__time\">{time}</div>\n                </div>\n\n                <div class=\"online-prestige__footer\">\n                    <div class=\"online-prestige__info\">{info}</div>\n                </div>\n            </div>\n        </div>");
             Lampa.Template.add('lampac_prestige_watched', "<div class=\"online-prestige online-prestige-watched selector\">\n            <div class=\"online-prestige-watched__icon\">\n                <svg width=\"21\" height=\"21\" viewBox=\"0 0 21 21\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <circle cx=\"10.5\" cy=\"10.5\" r=\"9\" stroke=\"currentColor\" stroke-width=\"3\"/>\n                    <path d=\"M14.8477 10.5628L8.20312 14.399L8.20313 6.72656L14.8477 10.5628Z\" fill=\"currentColor\"/>\n                </svg>\n            </div>\n            <div class=\"online-prestige-watched__body\">\n                \n            </div>\n        </div>");
         }
-        var button = "<div class=\"full-start__button selector view--online lampac--button\" data-subtitle=\"".concat(manifst.name, " ").concat(manifst.version, "\">\n        <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 392.697 392.697\" xml:space=\"preserve\">\n            <path d=\"M21.837,83.419l36.496,16.678L227.72,19.886c1.229-0.592,2.002-1.846,1.98-3.209c-0.021-1.365-0.834-2.592-2.082-3.145\n                L197.766,0.3c-0.903-0.4-1.933-0.4-2.837,0L21.873,77.036c-1.259,0.559-2.073,1.803-2.081,3.18\n                C19.784,81.593,20.584,82.847,21.837,83.419z\" fill=\"currentColor\"></path>\n            <path d=\"M185.689,177.261l-64.988-30.01v91.617c0,0.856-0.44,1.655-1.167,2.114c-0.406,0.257-0.869,0.386-1.333,0.386\n                c-0.368,0-0.736-0.082-1.079-0.244l-68.874-32.625c-0.869-0.416-1.421-1.293-1.421-2.256v-92.229L6.804,95.5\n                c-1.083-0.496-2.344-0.406-3.347,0.238c-1.002,0.645-1.608,1.754-1.608,2.944v208.744c0,1.371,0.799,2.615,2.045,3.185\n                l178.886,81.768c0.464,0.211,0.96,0.315,1.455,0.315c0.661,0,1.318-0.188,1.892-0.555c1.002-0.645,1.608-1.754,1.608-2.945\n                V180.445C187.735,179.076,186.936,177.831,185.689,177.261z\" fill=\"currentColor\"></path>\n            <path d=\"M389.24,95.74c-1.002-0.644-2.264-0.732-3.347-0.238l-178.876,81.76c-1.246,0.57-2.045,1.814-2.045,3.185v208.751\n                c0,1.191,0.606,2.302,1.608,2.945c0.572,0.367,1.23,0.555,1.892,0.555c0.495,0,0.991-0.104,1.455-0.315l178.876-81.768\n                c1.246-0.568,2.045-1.813,2.045-3.185V98.685C390.849,97.494,390.242,96.384,389.24,95.74z\" fill=\"currentColor\"></path>\n            <path d=\"M372.915,80.216c-0.009-1.377-0.823-2.621-2.082-3.18l-60.182-26.681c-0.938-0.418-2.013-0.399-2.938,0.045\n                l-173.755,82.992l60.933,29.117c0.462,0.211,0.958,0.316,1.455,0.316s0.993-0.105,1.455-0.316l173.066-79.092\n                C372.122,82.847,372.923,81.593,372.915,80.216z\" fill=\"currentColor\"></path>\n        </svg>\n\n        <span>#{title_online}</span>\n    </div>"); 
-        Lampa.Component.add('lampacskaz', component); 
+        var button = "<div class=\"full-start__button selector view--online lampac--button\" data-subtitle=\"".concat(manifst.name, " ").concat(manifst.version, "\">\n        <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 392.697 392.697\" xml:space=\"preserve\">\n            <path d=\"M21.837,83.419l36.496,16.678L227.72,19.886c1.229-0.592,2.002-1.846,1.98-3.209c-0.021-1.365-0.834-2.592-2.082-3.145\n                L197.766,0.3c-0.903-0.4-1.933-0.4-2.837,0L21.873,77.036c-1.259,0.559-2.073,1.803-2.081,3.18\n                C19.784,81.593,20.584,82.847,21.837,83.419z\" fill=\"currentColor\"></path>\n            <path d=\"M185.689,177.261l-64.988-30.01v91.617c0,0.856-0.44,1.655-1.167,2.114c-0.406,0.257-0.869,0.386-1.333,0.386\n                c-0.368,0-0.736-0.082-1.079-0.244l-68.874-32.625c-0.869-0.416-1.421-1.293-1.421-2.256v-92.229L6.804,95.5\n                c-1.083-0.496-2.344-0.406-3.347,0.238c-1.002,0.645-1.608,1.754-1.608,2.944v208.744c0,1.371,0.799,2.615,2.045,3.185\n                l178.886,81.768c0.464,0.211,0.96,0.315,1.455,0.315c0.661,0,1.318-0.188,1.892-0.555c1.002-0.645,1.608-1.754,1.608-2.945\n                V180.445C187.735,179.076,186.936,177.831,185.689,177.261z\" fill=\"currentColor\"></path>\n            <path d=\"M389.24,95.74c-1.002-0.644-2.264-0.732-3.347-0.238l-178.876,81.76c-1.246,0.57-2.045,1.814-2.045,3.185v208.751\n                c0,1.191,0.606,2.302,1.608,2.945c0.572,0.367,1.23,0.555,1.892,0.555c0.495,0,0.991-0.104,1.455-0.315l178.876-81.768\n                c1.246-0.568,2.045-1.813,2.045-3.185V98.685C390.849,97.494,390.242,96.384,389.24,95.74z\" fill=\"currentColor\"></path>\n            <path d=\"M372.915,80.216c-0.009-1.377-0.823-2.621-2.082-3.18l-60.182-26.681c-0.938-0.418-2.013-0.399-2.938,0.045\n                l-173.755,82.992l60.933,29.117c0.462,0.211,0.958,0.316,1.455,0.316s0.993-0.105,1.455-0.316l173.066-79.092\n                C372.122,82.847,372.923,81.593,372.915,80.216z\" fill=\"currentColor\"></path>\n        </svg>\n\n        <span>#{title_online}</span>\n    </div>"); // нужна заглушка, а то при страте лампы говорит пусто
+        Lampa.Component.add('lampacskaz', component); //то же самое
         resetTemplates();
 
         function addButton(e) {
             if (e.render.find('.lampac--button').length) return;
             var btn = $(Lampa.Lang.translate(button));
+            // //console.log(btn.clone().removeClass('focus').prop('outerHTML'))
             btn.on('hover:enter', function() {
                 resetTemplates();
                 Lampa.Component.add('lampacskaz', component);
