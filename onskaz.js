@@ -38,7 +38,7 @@
     function getHost() {
         if (connection_source === 'ab2024') return 'https://ab2024.ru/';
         if (connection_source === 'showy') return MIRRORS_SHOWY[current_showy_index];
-        if (connection_source === 'okeantv') return 'http://148.135.207.174:10097/';
+        if (connection_source === 'okeantv') return 'http://148.135.207.174:12359/';
         return randomUrl; // Skaz
     }
 
@@ -111,7 +111,7 @@
                 rchtype: Lampa.Platform.is('android') ? 'apk' : Lampa.Platform.is('tizen') ? 'cors' : (window.rch_nws[hostkey].type || 'web'),
                 apkVersion: window.rch_nws[hostkey].apkVersion,
                 player: Lampa.Storage.field('player'),
-                account_email: 'aksarus@gmail.com',
+                account_email: 'unionvoin@gmail.com',
                 unic_id: '123',
                 profile_id: Lampa.Storage.get('lampac_profile_id', ''),
                 token: ''
@@ -279,7 +279,7 @@
         else {
             // Логика Skaz (старая, с хардкодом)
             if (url.indexOf('account_email=') == -1) {
-                url = Lampa.Utils.addUrlComponent(url, 'account_email=aksarus@gmail.com');
+                url = Lampa.Utils.addUrlComponent(url, 'account_email=unionvoin@gmail.com');
             }
             if (url.indexOf('uid=') == -1) {
                 url = Lampa.Utils.addUrlComponent(url, 'uid=123');
@@ -549,7 +549,7 @@
             query.push('similar=' + (object.similar ? true : false));
             query.push('rchtype=' + (((window.rch_nws && window.rch_nws[hostkey]) ? window.rch_nws[hostkey].type : (window.rch && window.rch[hostkey]) ? window.rch[hostkey].type : '') || ''));
             // Hardcoded cub_id
-            query.push('cub_id=' + Lampa.Utils.hash('aru@gmail.com'));
+            query.push('cub_id=' + Lampa.Utils.hash('unionvoin@gmail.com'));
             return url + (url.indexOf('?') >= 0 ? '&' : '?') + query.join('&');
         };
         this.getLastChoiceBalanser = function() {
@@ -2163,4 +2163,5 @@
 
 
 })();
+
 
